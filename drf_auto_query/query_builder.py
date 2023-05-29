@@ -1,20 +1,17 @@
-from typing import List, Set
+from typing import List, Set, Type
 
 from django.db.models import Prefetch, QuerySet
 from django.db.models.constants import LOOKUP_SEP
-from rest_framework.fields import Field
+from rest_framework.serializers import Serializer
 from rest_framework.utils import model_meta
 
-from drf_auto_query.utils import get_model_from_serializer, get_serializer_fields
+from drf_auto_query.utils import SerializerField, get_model_from_serializer, get_serializer_fields
 
 
 class QueryBuilder:
-    """
-    Class that automatically generates a queryset that efficiently fetches all the data
-    needed for a DRF serializer.
-    """
+    """Class that manages query building for a DRF serializer."""
 
-    def __init__(self, serializer: Field, queryset: QuerySet = None):
+    def __init__(self, serializer: Serializer, queryset: QuerySet = None):
         self._serializer = serializer
         self._model_class = get_model_from_serializer(serializer)
         self._model_field_info = model_meta.get_field_info(self._model_class)
@@ -65,7 +62,9 @@ class QueryBuilder:
         return field_source.rpartition(LOOKUP_SEP)[0]
 
 
-def _get_selected_fields(model_field_info: model_meta.FieldInfo, fields: List[Field]) -> Set[str]:
+def _get_selected_fields(
+    model_field_info: model_meta.FieldInfo, fields: List[SerializerField]
+) -> Set[str]:
     """Returns all fields that should be selected in the queryset."""
 
     used_fields = set()
@@ -91,3 +90,19 @@ def _get_selected_fields(model_field_info: model_meta.FieldInfo, fields: List[Fi
         used_fields.update(nested_used_fields)
 
     return used_fields
+
+
+def get_queryset_from_serializer(
+    serializer_class: Type[Serializer], queryset: QuerySet = None
+) -> QuerySet:
+    """
+    Returns a queryset that efficiently fetches all the data needed for a DRF
+    serializer class.
+
+    :param serializer_class: The serializer class to generate the queryset for.
+    :param queryset: The base queryset to use. If not provided, the default
+        queryset for the serializer's model will be used.
+    """
+
+    serializer = serializer_class()
+    return QueryBuilder(serializer, queryset).get_queryset()

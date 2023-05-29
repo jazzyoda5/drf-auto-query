@@ -10,7 +10,7 @@ $ pip install drf-auto-query
 
 ## Description
 
-N+1 queries are a common problem in Django ORM. This package provides a `QueryBuilder` class 
+N+1 queries are a common problem in Django ORM. This package provides helper functions
 that can help with building the exact `QuerySet` needed on a rest framework endpoint.
 
 It is important to note that this package is not a silver bullet. It is meant to be used as a
@@ -21,7 +21,7 @@ it completely. It is still up to the developer to write efficient queries.
 
 ```python
 from rest_framework import serializers
-from drf_auto_query import QueryBuilder
+from drf_auto_query import get_queryset_from_serializer
 
 from my_app.models import User
 
@@ -36,11 +36,15 @@ class UserSerializer(serializers.Serializer):
         model = User
 
 
-serializer = UserSerializer()
-query_builder = QueryBuilder(serializer)
-queryset = query_builder.get_queryset()
+queryset = get_queryset_from_serializer(UserSerializer)
 ```
 
+You can also pass an initial queryset that will be used as a base for the generated queryset.
+
+```python
+queryset = User.objects.filter(is_active=True)
+queryset = get_queryset_from_serializer(UserSerializer, queryset=queryset)
+```
 
 ## Contributing
 
