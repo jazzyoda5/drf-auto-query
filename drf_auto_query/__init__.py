@@ -1,0 +1,1 @@
+from drf_auto_query.query_builder import QueryBuilder
