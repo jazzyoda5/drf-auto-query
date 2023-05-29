@@ -17,6 +17,20 @@ class ChildWithNestedParentNameSerializer(serializers.Serializer):
         model = models.Child
 
 
+class ChildWithNestedParentModelSerializer(serializers.ModelSerializer):
+    parent = ParentNameSerializer()
+
+    class Meta:
+        model = models.Child
+        fields = "__all__"
+
+
+class ChildModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Child
+        fields = "__all__"
+
+
 class GrandChildSerializer(serializers.Serializer):
     name = serializers.CharField()
     age = serializers.IntegerField()

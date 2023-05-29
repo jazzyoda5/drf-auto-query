@@ -17,10 +17,6 @@ class QueryBuilder:
         self._model_field_info = model_meta.get_field_info(self._model_class)
         self._queryset = queryset or self._model_class._base_manager.all()  # noqa
 
-    @property
-    def queryset(self):
-        return self.get_queryset()
-
     def get_queryset(self):
         serializer_fields = get_serializer_fields(self._serializer)
 
@@ -29,11 +25,7 @@ class QueryBuilder:
         self._queryset = self._queryset.only(*selected_fields)
 
         # Join all the tables used in nested serializers
-        query_joins = {
-            self._get_query_join(field_name)
-            for field_name in selected_fields
-            if LOOKUP_SEP in field_name
-        }
+        query_joins = self._get_query_joins(selected_fields)
         if query_joins:
             self._queryset = self._queryset.select_related(*query_joins)
 
@@ -50,12 +42,27 @@ class QueryBuilder:
             if not is_many_relation:
                 continue
 
-            prefetch_queryset = QueryBuilder(field).queryset
+            prefetch_queryset = QueryBuilder(field).get_queryset()
             self._queryset = self._queryset.prefetch_related(
                 Prefetch(field.source, queryset=prefetch_queryset)
             )
 
         return self._queryset
+
+    def _get_query_joins(self, selected_fields: Set[str]) -> Set[str]:
+        """Returns all the arguments needed for the 'select_related' method."""
+
+        query_joins = set()
+        for field_name in selected_fields:
+            field_parts = field_name.split(LOOKUP_SEP)
+            relation = field_parts[0]
+            if relation not in self._model_field_info.relations:
+                continue
+
+            query_join = relation if len(field_parts) == 1 else LOOKUP_SEP.join(field_parts[:-1])
+            query_joins.add(query_join)
+
+        return query_joins
 
     @staticmethod
     def _get_query_join(field_source: str) -> str:
