@@ -1,103 +1,162 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock
 
-from django.db.models import Prefetch, QuerySet
 from django.test import TestCase
 
-from drf_auto_query.query_builder import get_queryset_from_serializer
-from tests.factories import ChildFactory, ParentFactory
-from tests.serializers import (
-    ChildModelSerializer,
-    ChildWithNestedGrandChildrenNamesSerializer,
-    ChildWithNestedParentModelSerializer,
-    ChildWithNestedParentNameSerializer,
-    FullChildSerializer,
-    ParentNameSerializer,
-)
-from tests.utils import _get_selected_fields_on_queryset
+from drf_auto_query.field_tree_builder import FieldNode
+from drf_auto_query.query_builder import QueryBuilder, _get_selected_fields
+from drf_auto_query.types import ModelRelation
+from tests.factories import AuthorFactory, BookFactory, PublisherFactory
+from tests.models import Author, Book, Publisher
 
 
-class SingleFieldQueryTestCase(TestCase):
-    def test_select_only_used_field(self):
+class GetSelectedFieldsTestCase(TestCase):
+    def test_single_related_field(self):
+        # Arrange
+        parent_node = FieldNode(
+            field_name="parent_node",
+            source="parent_node",
+            serializer_field=MagicMock(),
+            model=Author,
+        )
+        child_node = FieldNode(
+            field_name="book",
+            source="favourite_book",
+            serializer_field=MagicMock(),
+            parent_relation=ModelRelation.RELATED_MODEL,
+            model=Book,
+        )
+        parent_node.children.append(child_node)
+
         # Act
-        queryset = get_queryset_from_serializer(ParentNameSerializer)
+        selected_fields = _get_selected_fields(parent_node)
 
         # Assert
-        self.assertCountEqual({"name"}, _get_selected_fields_on_queryset(queryset))
+        self.assertEqual(len(selected_fields), 1)
+        self.assertEqual(list(selected_fields)[0], "favourite_book__id")
 
+    def test_two_level_single_related_field(self):
+        # Arrange
+        parent_node = FieldNode(
+            field_name="parent_node",
+            source="parent_node",
+            serializer_field=MagicMock(),
+            model=Author,
+        )
+        child_node = FieldNode(
+            field_name="book",
+            source="favourite_book",
+            serializer_field=MagicMock(),
+            parent_relation=ModelRelation.RELATED_MODEL,
+            model=Book,
+        )
+        grandchild_node = FieldNode(
+            field_name="title",
+            source="title",
+            serializer_field=MagicMock(),
+            parent_relation=ModelRelation.FIELD,
+            model=Book,
+        )
+        child_node.children.append(grandchild_node)
+        parent_node.children.append(child_node)
 
-class JoinSingleRelatedFieldTableTestCase(TestCase):
-    @patch.object(QuerySet, "select_related")
-    def test_add_select_related_statement(self, mock_select_related):
         # Act
-        get_queryset_from_serializer(ChildWithNestedParentNameSerializer)
+        selected_fields = _get_selected_fields(parent_node)
 
         # Assert
-        mock_select_related.assert_called_once_with("parent")
+        self.assertEqual(len(selected_fields), 1)
+        self.assertEqual(list(selected_fields)[0], "favourite_book__title")
 
-    @patch.object(QuerySet, "only")
-    def test_select_only_used_fields(self, mock_only):
+    def test_three_level_relation(self):
+        # Arrange
+        parent_node = FieldNode(
+            field_name="parent_node",
+            source="parent_node",
+            serializer_field=MagicMock(),
+            model=Author,
+        )
+        child_node = FieldNode(
+            field_name="book",
+            source="favourite_book",
+            serializer_field=MagicMock(),
+            parent_relation=ModelRelation.RELATED_MODEL,
+            model=Book,
+        )
+        grandchild_node = FieldNode(
+            field_name="publisher",
+            source="publisher",
+            serializer_field=MagicMock(),
+            parent_relation=ModelRelation.RELATED_MODEL,
+            model=Publisher,
+        )
+        great_grandchild_node = FieldNode(
+            field_name="name",
+            source="name",
+            serializer_field=MagicMock(),
+            parent_relation=ModelRelation.FIELD,
+        )
+        grandchild_node.children.append(great_grandchild_node)
+        child_node.children.append(grandchild_node)
+        parent_node.children.append(child_node)
+
         # Act
-        get_queryset_from_serializer(ChildWithNestedParentNameSerializer)
+        selected_fields = _get_selected_fields(parent_node)
 
         # Assert
-        mock_only.assert_called_once_with("parent__name")
+        self.assertEqual(len(selected_fields), 1)
+        self.assertEqual(list(selected_fields)[0], "favourite_book__publisher__name")
 
+    def test_no_relation(self):
+        # Arrange
+        parent_node = FieldNode(
+            field_name="parent_node",
+            source="parent_node",
+            serializer_field=MagicMock(),
+            model=Author,
+        )
+        child_node = FieldNode(
+            field_name="name",
+            source="name",
+            serializer_field=MagicMock(),
+            parent_relation=ModelRelation.NONE,
+            model=Author,
+        )
+        parent_node.children.append(child_node)
 
-class PrefetchManyRelatedFieldTableTestCase(TestCase):
-    @patch.object(QuerySet, "prefetch_related")
-    def test_prefetch_related_model(self, mock_prefetch_related):
         # Act
-        get_queryset_from_serializer(FullChildSerializer)
+        selected_fields = _get_selected_fields(parent_node)
 
         # Assert
-        mock_prefetch_related.assert_called_once()
-
-        call_args = mock_prefetch_related.call_args[0]
-        self.assertEqual(len(call_args), 1)
-
-        prefetch_call_arg = call_args[0]
-        self.assertIsInstance(prefetch_call_arg, Prefetch)
-        self.assertEqual(prefetch_call_arg.prefetch_through, "grand_children")
-
-    @patch.object(QuerySet, "prefetch_related")
-    def test_select_only_used_fields_on_prefetch_queryset(self, mock_prefetch_related):
-        # Act
-        get_queryset_from_serializer(ChildWithNestedGrandChildrenNamesSerializer)
-
-        # Assert
-        mock_prefetch_related.assert_called_once()
-
-        prefetch_obj: Prefetch = mock_prefetch_related.call_args[0][0]
-        prefetch_queryset = prefetch_obj.queryset
-        selected_fields = _get_selected_fields_on_queryset(prefetch_queryset)
-        self.assertCountEqual({"name"}, selected_fields)
+        self.assertEqual(len(selected_fields), 0)
 
 
-class SelectRelatedWithModelSerializerTestCase(TestCase):
+class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
     def setUp(self) -> None:
-        self.parent = ParentFactory.create()
-        self.child = ChildFactory.create(parent=self.parent)
+        self.author = AuthorFactory.create()
+        self.books = BookFactory.create_batch(3, author=self.author)
+        self.publishers = PublisherFactory.create_batch(3)
+        self.author.publisher_friends.add(*self.publishers)
 
-    def test_get_queryset_from_model_serializer(self):
+    def test_simple_prefetch(self):
         # Arrange
-        serializer_class = ChildWithNestedParentModelSerializer
+        parent_node = FieldNode(
+            field_name="author",
+            source="author",
+            serializer_field=MagicMock(),
+            model=Author,
+        )
+        child_node = FieldNode(
+            field_name="publisher_friends",
+            source="publisher_friends",
+            serializer_field=MagicMock(),
+            parent_relation=ModelRelation.MANY_RELATED_MODEL,
+            model=Publisher,
+        )
+        parent_node.children.append(child_node)
 
         # Act
-        queryset = get_queryset_from_serializer(serializer_class)
+        queryset = Author.objects.all()
+        prefetch_objects = QueryBuilder(queryset)._get_prefetch_objects(parent_node)
 
         # Assert
-        with self.assertNumQueries(1):
-            serializer = serializer_class(queryset, many=True)
-            self.assertEqual(len(serializer.data), 1)
-
-    def test_get_queryset_from_model_serializer_with_prefetch(self):
-        # Arrange
-        serializer_class = ChildModelSerializer
-
-        # Act
-        queryset = get_queryset_from_serializer(serializer_class)
-
-        # Assert
-        with self.assertNumQueries(1):
-            serializer = serializer_class(queryset, many=True)
-            self.assertEqual(len(serializer.data), 1)
+        self.assertEqual(len(prefetch_objects), 1)
+        self.assertEqual(prefetch_objects[0].prefetch_through, "publisher_friends")
