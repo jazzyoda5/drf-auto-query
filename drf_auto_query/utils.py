@@ -23,22 +23,3 @@ def _get_base_serializer(serializer: Serializer) -> Serializer:
         return serializer.child
 
     return serializer
-
-
-def has_field_relation_to_model(model: ModelType, field: SerializerField) -> bool:
-    """
-    Returns True if the source of a serializer field is in any way related
-    to the model class.
-    """
-    """
-    Returns True if the source of a serializer field is in any way related
-    to the model class of this node.
-    """
-
-    if not model:
-        return False
-
-    model_meta = model_meta.get_field_info(model)
-    return field.source in self.model_meta.fields or field_source in self.model_meta.relations
-
-    return field.source in model_meta.get_field_info(model).relations
