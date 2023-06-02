@@ -1,5 +1,5 @@
 # Changelog
 
-## v0.1.0 (29/05/2023)
+## v0.1b0 (29/05/2023)
 
-- First release of `drf-auto-query`!
+- First beta release of `drf-auto-query`!

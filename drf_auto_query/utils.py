@@ -1,27 +1,8 @@
-from typing import List, Union
+from typing import List
 
-from django.db.models import Model
-from rest_framework.fields import Field
 from rest_framework.serializers import Serializer
-from rest_framework.utils.model_meta import is_abstract_model
 
-
-SerializerField = Union[Field, Serializer]
-
-
-def get_model_from_serializer(serializer: Serializer) -> Model:
-    """Returns the model configured on a serializer."""
-
-    serializer = _get_base_serializer(serializer)
-
-    assert hasattr(serializer, "Meta") and hasattr(
-        serializer.Meta, "model"
-    ), "Serializer must have a Meta class with a model attribute."
-
-    model = serializer.Meta.model
-    assert not is_abstract_model(model), "Model must not be abstract."
-
-    return model
+from drf_auto_query.types import ModelType, SerializerField
 
 
 def get_serializer_fields(serializer: Serializer) -> List[SerializerField]:
@@ -42,3 +23,22 @@ def _get_base_serializer(serializer: Serializer) -> Serializer:
         return serializer.child
 
     return serializer
+
+
+def has_field_relation_to_model(model: ModelType, field: SerializerField) -> bool:
+    """
+    Returns True if the source of a serializer field is in any way related
+    to the model class.
+    """
+    """
+    Returns True if the source of a serializer field is in any way related
+    to the model class of this node.
+    """
+
+    if not model:
+        return False
+
+    model_meta = model_meta.get_field_info(model)
+    return field.source in self.model_meta.fields or field_source in self.model_meta.relations
+
+    return field.source in model_meta.get_field_info(model).relations

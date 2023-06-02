@@ -19,9 +19,16 @@ it completely. It is still up to the developer to write efficient queries.
 
 ## Usage
 
+### Prefetch function
+
+The `prefetch_queryset_for_serializer` function takes a `QuerySet` and a `Serializer` class
+and returns a `QuerySet` with all the needed `prefetch_related` and `select_related` calls.
+
+Any annotations, joins or other modifications to the `QuerySet` will be preserved.
+
 ```python
 from rest_framework import serializers
-from drf_auto_query import get_queryset_from_serializer
+from drf_auto_query import prefetch_queryset_for_serializer
 
 from my_app.models import User
 
@@ -31,20 +38,17 @@ class UserSerializer(serializers.Serializer):
     username = serializers.CharField()
     email = serializers.EmailField()
 
-    class Meta:
-        # The 'model' attribute is required for the QueryBuilder to work
-        model = User
-
-
-queryset = get_queryset_from_serializer(UserSerializer)
+    
+class UserGroupSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    users = UserSerializer(many=True)
+    
+    
+queryset = User.objects.all()
+queryset = prefetch_queryset_for_serializer(queryset, UserSerializer)
 ```
 
-You can also pass an initial queryset that will be used as a base for the generated queryset.
-
-```python
-queryset = User.objects.filter(is_active=True)
-queryset = get_queryset_from_serializer(UserSerializer, queryset=queryset)
-```
 
 ## Contributing
 
