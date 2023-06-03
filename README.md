@@ -88,6 +88,8 @@ class MyModelList(generics.ListAPIView):
 Using the both the mixin and the prefetch function ensures that any annotations, joins, or other modifications to the 
 QuerySet are preserved while automatically prefetching the necessary data for efficient serialization.
 
+
+
 > :warning: Any multi-nested prefetches that have altered querysets might be 
 > overwritten. This is a known issue and will be addressed in a future release.
 > 
