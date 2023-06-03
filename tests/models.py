@@ -1,9 +1,10 @@
 from django.db import models
 
+from drf_auto_query.mixins import AutoQuerySetMixin
 
-class Parent(models.Model):
-    name = models.CharField(max_length=255)
-    description = models.TextField()
+
+class AuthorQuerySet(AutoQuerySetMixin, models.QuerySet):
+    ...
 
 
 class Author(models.Model):
@@ -13,6 +14,8 @@ class Author(models.Model):
     favourite_book = models.ForeignKey(
         "Book", on_delete=models.CASCADE, related_name="authors_where_favourite_book", null=True
     )
+
+    objects = models.Manager.from_queryset(AuthorQuerySet)()
 
 
 class Book(models.Model):
@@ -33,3 +36,11 @@ class TwinBrotherAuthor(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     author = models.OneToOneField(Author, on_delete=models.CASCADE, related_name="twin_brother")
+
+
+class TwinSisterAuthor(models.Model):
+    uuid = models.UUIDField(primary_key=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    author = models.OneToOneField(Author, on_delete=models.CASCADE, related_name="twin_sister")
+    publisher_friends = models.ManyToManyField("Publisher", related_name="twin_sister_friends")

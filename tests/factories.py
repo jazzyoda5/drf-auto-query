@@ -1,12 +1,7 @@
 import factory
 from factory.django import DjangoModelFactory
 
-from tests.models import Author, Book, Parent, Publisher
-
-
-class ParentFactory(DjangoModelFactory):
-    class Meta:
-        model = Parent
+from tests.models import Author, Book, Publisher, TwinBrotherAuthor
 
 
 class AuthorFactory(DjangoModelFactory):
@@ -31,3 +26,11 @@ class PublisherFactory(DjangoModelFactory):
 
     class Meta:
         model = Publisher
+
+
+class TwinBrotherAuthorFactory(DjangoModelFactory):
+    name = factory.Faker("name")
+    description = factory.Faker("text")
+
+    class Meta:
+        model = TwinBrotherAuthor
