@@ -1,15 +1,40 @@
 [tool.poetry]
 name = "drf-auto-query"
-version = "0.1b0"
-description = ""
-authors = ["Jakob <jakobverlic66@gmail.com>"]
+version = "0.1.0"
+description = "Auto generate Django ORM query sets from serializers."
+authors = ["drf-auto-query <jakobverlic66@gmail.com>"]
 readme = "README.md"
 packages = [{include = "drf_auto_query"}]
+license = "MIT"
+repository = "https://github.com/jazzyoda5/drf-auto-query"
+homepage = "https://github.com/jazzyoda5/drf-auto-query"
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Framework :: Django",
+    "Framework :: Django :: 2.2",
+    "Framework :: Django :: 3.0",
+    "Framework :: Django :: 3.1",
+    "Framework :: Django :: 3.2",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.7"
 django = ">=2.2"
-djangorestframework = ">=3.11"
+djangorestframework = "*"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
