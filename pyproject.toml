@@ -32,9 +32,10 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.7"
+python = ">=3.9"
 django = ">=2.2"
 djangorestframework = "*"
+docutils = "0.21.1"  # Solve this
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
