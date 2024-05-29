@@ -32,10 +32,10 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.7"
 django = ">=2.2"
 djangorestframework = "*"
-docutils = "0.21.1"  # Solve this
+docutils = "!=0.21"  # Poetry is having problems with docutils -> https://github.com/python-poetry/poetry/issues/9293
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
@@ -47,3 +47,6 @@ twine = "^4.0.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[virtualenvs]
+in-project = true
