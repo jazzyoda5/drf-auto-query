@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 from rest_framework import serializers
 
-from drf_auto_query.field_tree_builder import FieldNode
+from drf_auto_query.utils import FieldNode
 from tests.models import Author
 
 

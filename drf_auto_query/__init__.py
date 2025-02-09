@@ -1,1 +1,3 @@
-from drf_auto_query.query_builder import prefetch_queryset_for_serializer
+from .query import build_queryset, QueryBuilder
+
+__all__ = ["build_queryset", "QueryBuilder"]

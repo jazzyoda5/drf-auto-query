@@ -1,4 +1,4 @@
-from drf_auto_query import prefetch_queryset_for_serializer
+from drf_auto_query import build_queryset
 
 
 class AutoQuerySetMixin:
@@ -9,4 +9,4 @@ class AutoQuerySetMixin:
     """
 
     def prefetch_for(self, serializer_class):
-        return prefetch_queryset_for_serializer(self, serializer_class)
+        return build_queryset(self, serializer_class)

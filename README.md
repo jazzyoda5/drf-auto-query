@@ -30,7 +30,7 @@ and `select_related` calls on a `QuerySet` based on a given serializer class.
 
 ```python
 from rest_framework import serializers
-from drf_auto_query import prefetch_queryset_for_serializer
+from drf_auto_query import build_queryset
 
 from my_app.models import UserGroup
 
@@ -40,15 +40,15 @@ class UserSerializer(serializers.Serializer):
     username = serializers.CharField()
     email = serializers.EmailField()
 
-    
+
 class UserGroupSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     users = UserSerializer(many=True)
-    
-    
+
+
 queryset = UserGroup.objects.all()
-queryset = prefetch_queryset_for_serializer(queryset, UserGroupSerializer)
+queryset = build_queryset(queryset, UserGroupSerializer)
 ```
 
 ### QuerySet mixin

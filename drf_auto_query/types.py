@@ -12,8 +12,8 @@ SerializerField = Union[Field, Serializer]
 ModelType = TypeVar("ModelType", bound=Model)
 
 
-class ModelRelation(enum.Enum):
-    FIELD = "field"
-    RELATED_MODEL = "related_model"
-    MANY_RELATED_MODEL = "many_related_model"
-    NONE = "none"
+class Relation(enum.Enum):
+    FIELD = 0
+    X_TO_ONE = 1  # TODO [jakob]: rename to X_TO_ONE
+    X_TO_MANY = 2  # TODO [jakob]: rename to X_TO_MANY
+    NONE = 3

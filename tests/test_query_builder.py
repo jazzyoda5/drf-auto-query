@@ -4,13 +4,13 @@ from django.db.models import Prefetch, Value
 from django.test import TestCase
 from rest_framework import serializers
 
-from drf_auto_query.field_tree_builder import FieldNode
-from drf_auto_query.query_builder import (
+from drf_auto_query.utils import FieldNode
+from drf_auto_query.query import (
     QueryBuilder,
     _get_selected_fields,
-    prefetch_queryset_for_serializer,
+    build_queryset,
 )
-from drf_auto_query.types import ModelRelation
+from drf_auto_query.types import Relation
 from tests.factories import AuthorFactory, BookFactory, PublisherFactory, TwinBrotherAuthorFactory
 from tests.models import Author, Book, Publisher, TwinSisterAuthor
 from tests.utils import author_field_node, test_serializer, test_serializer_class
@@ -24,7 +24,7 @@ class GetSelectedFieldsTestCase(TestCase):
             field_name="book",
             source="favourite_book",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.RELATED_MODEL,
+            parent_relation=Relation.X_TO_ONE,
             model=Book,
         )
         parent_node.children.append(child_node)
@@ -43,14 +43,14 @@ class GetSelectedFieldsTestCase(TestCase):
             field_name="book",
             source="favourite_book",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.RELATED_MODEL,
+            parent_relation=Relation.X_TO_ONE,
             model=Book,
         )
         grandchild_node = FieldNode(
             field_name="title",
             source="title",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.FIELD,
+            parent_relation=Relation.FIELD,
             model=Book,
         )
         child_node.children.append(grandchild_node)
@@ -70,21 +70,21 @@ class GetSelectedFieldsTestCase(TestCase):
             field_name="book",
             source="favourite_book",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.RELATED_MODEL,
+            parent_relation=Relation.X_TO_ONE,
             model=Book,
         )
         grandchild_node = FieldNode(
             field_name="publisher",
             source="publisher",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.RELATED_MODEL,
+            parent_relation=Relation.X_TO_ONE,
             model=Publisher,
         )
         great_grandchild_node = FieldNode(
             field_name="name",
             source="name",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.FIELD,
+            parent_relation=Relation.FIELD,
         )
         grandchild_node.children.append(great_grandchild_node)
         child_node.children.append(grandchild_node)
@@ -121,7 +121,7 @@ class GetSelectedFieldsTestCase(TestCase):
             field_name="twin_sister",
             source="twin_sister",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.RELATED_MODEL,
+            parent_relation=Relation.X_TO_ONE,
             model=TwinSisterAuthor,
         )
         parent_node.children.append(child_node)
@@ -148,7 +148,7 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
             field_name="publisher_friends",
             source="publisher_friends",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.MANY_RELATED_MODEL,
+            parent_relation=Relation.X_TO_MANY,
             model=Publisher,
         )
         parent_node.children.append(child_node)
@@ -168,14 +168,14 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
             field_name="books",
             source="books",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.MANY_RELATED_MODEL,
+            parent_relation=Relation.X_TO_MANY,
             model=Book,
         )
         grandchild_node = FieldNode(
             field_name="publisher",
             source="publisher",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.RELATED_MODEL,
+            parent_relation=Relation.X_TO_ONE,
             model=Publisher,
         )
         parent_node.children.append(child_node)
@@ -189,7 +189,7 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
         self.assertEqual(len(prefetch_objects), 1)
         self.assertEqual(prefetch_objects[0].prefetch_through, "books")
 
-        prefetch_queryset = prefetch_objects[0].queryset
+        prefetch_queryset = prefetch_objects[0]._queryset
         self.assertIn("publisher", prefetch_queryset.query.select_related)
 
     def test_do_not_overwrite_existing_prefetch(self):
@@ -199,7 +199,7 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
             field_name="books",
             source="books",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.MANY_RELATED_MODEL,
+            parent_relation=Relation.X_TO_MANY,
             model=Book,
         )
         parent_node.children.append(child_node)
@@ -212,7 +212,7 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
 
         # Assert
         self.assertEqual(len(prefetch_objects), 1)
-        prefetch_queryset = prefetch_objects[0].queryset
+        prefetch_queryset = prefetch_objects[0]._queryset
         self.assertIn("test_annotation", prefetch_queryset.query.annotations)
 
     def test_prefetch_on_nested_model(self):
@@ -222,14 +222,14 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
             field_name="twin_sister",
             source="twin_sister",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.RELATED_MODEL,
+            parent_relation=Relation.X_TO_ONE,
             model=TwinSisterAuthor,
         )
         grandchild_node = FieldNode(
             field_name="publisher_friends",
             source="publisher_friends",
             serializer_field=MagicMock(),
-            parent_relation=ModelRelation.MANY_RELATED_MODEL,
+            parent_relation=Relation.X_TO_MANY,
             model=Publisher,
         )
         parent_node.children.append(child_node)
@@ -266,7 +266,7 @@ class PrefetchQuerysetForSerializerTestCase(TestCase):
         )
 
         # Act
-        queryset = prefetch_queryset_for_serializer(Author.objects.all(), serializer_class)
+        queryset = build_queryset(Author.objects.all(), serializer_class)
 
         # Assert
         serializer = serializer_class(queryset, many=True)
@@ -292,7 +292,7 @@ class PrefetchQuerysetForSerializerTestCase(TestCase):
         )
 
         # Act
-        queryset = prefetch_queryset_for_serializer(Author.objects.all(), serializer_class)
+        queryset = build_queryset(Author.objects.all(), serializer_class)
 
         # Assert
         serializer = serializer_class(queryset, many=True)
