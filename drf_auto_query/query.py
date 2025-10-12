@@ -4,8 +4,9 @@ from django.db.models import Prefetch, QuerySet
 from django.db.models.constants import LOOKUP_SEP
 from rest_framework.serializers import Serializer
 
+from drf_auto_query.inspect import inspect_queryset
 from drf_auto_query.types import Relation
-from drf_auto_query.utils import FieldNode, build_field_tree
+from drf_auto_query.utils import FieldNode  # , build_field_tree
 
 
 # TODO: No need for this function, we can just use the QueryBuilder directly.
@@ -92,7 +93,7 @@ def get_prefetched(queryset: QuerySet):
 class QueryBuilder:
     def __init__(self, queryset: QuerySet):
         self.initial_queryset = queryset
-        self.already_prefetched: dict[str, PrefetchPath] = get_prefetched(queryset)
+        self.queryset_info = inspect_queryset(self.initial_queryset)
 
         self._queryset = None
         self._added_prefetches: list[Prefetch] = []
@@ -121,10 +122,11 @@ class QueryBuilder:
 
         self.reset()
 
-        field_tree = build_field_tree(serializer, self._queryset.model)
-
-        for node in field_tree.children:
-            self._process_node(node)
+        # TODO: Update to use build_field_map
+        # field_tree = build_field_tree(serializer, self._queryset.model)
+        #
+        # for node in field_tree.children:
+        #     self._process_node(node, self._queryset)
 
         if self._added_joins:
             self._queryset = self._queryset.select_related(*self._added_joins)
@@ -136,6 +138,7 @@ class QueryBuilder:
     def _process_node(
         self,
         node: FieldNode,
+        base_queryset: QuerySet,
         # nearest_qs: QuerySet = None,
         # path_from_nearest_qs: str = "",
         parent: str = "",
@@ -143,7 +146,7 @@ class QueryBuilder:
     ):
         source = f"{parent}{LOOKUP_SEP}{node.source}" if parent else node.source
 
-        if node.parent_relation == Relation.X_TO_MANY:
+        if node.parent_relation == Relation.ONE_TO_MANY:
             # what if it is already prefetched?
             if source not in self.already_prefetched:
                 prefetch = Prefetch(source, queryset=self._get_prefetch_queryset(node, source))
@@ -155,7 +158,7 @@ class QueryBuilder:
             else:
                 join_to = self.already_prefetched[source].path[-1]
 
-        elif node.parent_relation == Relation.X_TO_ONE:
+        elif node.parent_relation == Relation.ONE_TO_ONE:
             if not join_to:
                 self._added_joins.append(source)
             else:

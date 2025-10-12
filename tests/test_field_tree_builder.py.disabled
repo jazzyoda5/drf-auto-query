@@ -69,7 +69,7 @@ class BuildSerializerFieldTreeTestCase(TestCase):
 
         child_node = field_tree.children[0]
         self.assertEqual(child_node.field_name, "favourite_book")
-        self.assertEqual(child_node.parent_relation, Relation.X_TO_ONE)
+        self.assertEqual(child_node.parent_relation, Relation.ONE_TO_ONE)
         self.assertEqual(len(child_node.children), 2)
 
     def test_reverse_single_related_field(self):
@@ -96,7 +96,7 @@ class BuildSerializerFieldTreeTestCase(TestCase):
         child_node = field_tree.children[0]
         self.assertEqual(child_node.field_name, "authors")
         self.assertEqual(child_node.source, "authors_where_favourite_book")
-        self.assertEqual(child_node.parent_relation, Relation.X_TO_MANY)
+        self.assertEqual(child_node.parent_relation, Relation.ONE_TO_MANY)
         self.assertEqual(len(child_node.children), 2)
 
     def test_many_to_many_field(self):
@@ -120,5 +120,5 @@ class BuildSerializerFieldTreeTestCase(TestCase):
 
         child_node = field_tree.children[0]
         self.assertEqual(child_node.field_name, "publisher_friends")
-        self.assertEqual(child_node.parent_relation, Relation.X_TO_MANY)
+        self.assertEqual(child_node.parent_relation, Relation.ONE_TO_MANY)
         self.assertEqual(len(child_node.children), 1)

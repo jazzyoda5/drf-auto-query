@@ -8,10 +8,11 @@ from drf_auto_query.types import ModelType, SerializerField, Relation
 
 def get_serializer_fields(serializer: Serializer) -> List[SerializerField]:
     base_serializer = _get_base_serializer(serializer)
-    if not hasattr(base_serializer, "fields"):
-        return []
-
-    return list(getattr(base_serializer, "fields", {}).values())
+    return (
+        list(getattr(base_serializer, "fields", {}).values())
+        if hasattr(base_serializer, "fields")
+        else []
+    )
 
 
 def _get_base_serializer(serializer: Serializer) -> Serializer:
@@ -20,10 +21,7 @@ def _get_base_serializer(serializer: Serializer) -> Serializer:
     avoid problems with list serializers.
     """
 
-    if hasattr(serializer, "child"):
-        return serializer.child
-
-    return serializer
+    return serializer.child if hasattr(serializer, "child") else serializer
 
 
 class FieldNode:
@@ -37,16 +35,16 @@ class FieldNode:
         field_name: str,
         source: str,
         serializer_field: SerializerField,
-        parent_relation: Relation = Relation.NONE,
+        relation_to_parent: Relation = Relation.NONE,
         model: Type[ModelType] = None,
     ):
         self.field_name = field_name
         self.source = source
         self.serializer_field = serializer_field
-        self.parent_relation = parent_relation
+        self.relation_to_parent = relation_to_parent
         self.model = model
 
-        self.children: List[FieldNode] = []
+        # self.children: List[FieldNode] = []
 
         self._model_meta = None
 
@@ -62,10 +60,10 @@ class FieldNode:
         to the model class of this node.
         """
 
-        if not self.model:
-            return False
+        return bool(self.model) and field_source in self.model_meta.relations
 
-        return field_source in self.model_meta.fields or field_source in self.model_meta.relations
+    def is_field(self, field_source: str):
+        return bool(self.model) and field_source in self.model_meta.fields
 
     def __repr__(self):
         return f"<FieldNode {self.field_name}>"
@@ -77,45 +75,93 @@ class FieldNode:
         return cls(serializer_field=field, **kwargs)
 
 
-def build_field_tree(
+def build_field_map(
     field: SerializerField,
     model: Type[ModelType] = None,
-    parent_relation: Relation = Relation.NONE,
-) -> FieldNode:
+    relation_to_parent: Relation = Relation.NONE,
+) -> dict[str, FieldNode]:
     """
-    Iterates over all the fields of a serializer node and builds a tree of
-    FieldNode objects.
+    Iterates over all the fields of a serializer and builds a flat dictionary
+    mapping field paths to FieldNode objects.
+
+    Args:
+        field: The serializer field (typically a Serializer instance)
+        model: The Django model class for this field
+        relation_to_parent: The relation type from parent to this field
+
+    Returns:
+        A dictionary where keys are field paths (e.g., "books", "books__publisher")
+        and values are FieldNode objects.
+
+    Example:
+        >>> from myapp.serializers import AuthorSerializer
+        >>> from myapp.models import Author
+        >>> field_map = build_field_map(AuthorSerializer(), Author)
+        >>> field_map.keys()
+        dict_keys(['books', 'books__publisher', 'publisher_friends', ...])
+        >>> field_map['books'].relation_to_parent
+        <Relation.ONE_TO_MANY: 2>
     """
 
-    field_node = FieldNode.from_field(field, model=model, parent_relation=parent_relation)
+    field_map = {}
 
     children_fields = get_serializer_fields(field)
-    if not children_fields:
-        return field_node
-
-    for field in children_fields:
-        if not model or not field_node.has_relation(field.source):
-            # This is a serializer field that does not correspond to a model field
-            # (e.g. SerializerMethodField).
-            child_node = build_field_tree(field)
-            field_node.children.append(child_node)
-            continue
-
-        if field.source in field_node.model_meta.fields:
-            # Serializer field that corresponds to a model field, but does not
-            # represent a relation to another model.
-            child_node = build_field_tree(field, parent_relation=Relation.FIELD)
-            field_node.children.append(child_node)
-            continue
-
-        relation_info = field_node.model_meta.relations[field.source]
-        parent_relation = Relation.X_TO_MANY if relation_info.to_many else Relation.X_TO_ONE
-
-        child_node = build_field_tree(
-            field,
-            model=relation_info.related_model,
-            parent_relation=parent_relation,
+    for child_field in children_fields:
+        _inspect_serializer_field(
+            child_field=child_field,
+            parent_node=FieldNode.from_field(field, model=model, relation_to_parent=relation_to_parent),
+            field_map=field_map,
+            parent_path="",
         )
-        field_node.children.append(child_node)
 
-    return field_node
+    return field_map
+
+
+def _inspect_serializer_field(
+    child_field: SerializerField,
+    parent_node: FieldNode,
+    field_map: dict[str, FieldNode],
+    parent_path: str = "",
+):
+    """
+    Recursively builds a flat field map from a serializer structure.
+
+    Args:
+        child_field: The current serializer field being processed
+        parent_node: The parent FieldNode containing model info
+        field_map: The dictionary to populate with field paths and nodes
+        parent_path: The path from the root to the current field's parent
+    """
+
+    field_path = f"{parent_path}__{child_field.source}" if parent_path else child_field.source
+
+    # Check if this field corresponds to a model relation
+    if parent_node.model and parent_node.has_relation(child_field.source):
+        # This is a relation field
+        relation_info = parent_node.model_meta.relations[child_field.source]
+        relation_to_parent = Relation.ONE_TO_MANY if relation_info.to_many else Relation.ONE_TO_ONE
+
+        field_node = FieldNode.from_field(
+            child_field,
+            model=relation_info.related_model,
+            relation_to_parent=relation_to_parent,
+        )
+        field_map[field_path] = field_node
+
+        for nested_field in get_serializer_fields(child_field):
+            _inspect_serializer_field(
+                child_field=nested_field,
+                parent_node=field_node,
+                field_map=field_map,
+                parent_path=field_path,
+            )
+
+    else:
+        field_node = FieldNode.from_field(
+            child_field,
+            model=parent_node.model,
+            relation_to_parent=Relation.FIELD
+            if parent_node.is_field(child_field.source)
+            else Relation.NONE,
+        )
+        field_map[field_path] = field_node

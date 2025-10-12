@@ -24,7 +24,7 @@ class GetSelectedFieldsTestCase(TestCase):
             field_name="book",
             source="favourite_book",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_ONE,
+            parent_relation=Relation.ONE_TO_ONE,
             model=Book,
         )
         parent_node.children.append(child_node)
@@ -43,7 +43,7 @@ class GetSelectedFieldsTestCase(TestCase):
             field_name="book",
             source="favourite_book",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_ONE,
+            parent_relation=Relation.ONE_TO_ONE,
             model=Book,
         )
         grandchild_node = FieldNode(
@@ -70,14 +70,14 @@ class GetSelectedFieldsTestCase(TestCase):
             field_name="book",
             source="favourite_book",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_ONE,
+            parent_relation=Relation.ONE_TO_ONE,
             model=Book,
         )
         grandchild_node = FieldNode(
             field_name="publisher",
             source="publisher",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_ONE,
+            parent_relation=Relation.ONE_TO_ONE,
             model=Publisher,
         )
         great_grandchild_node = FieldNode(
@@ -121,7 +121,7 @@ class GetSelectedFieldsTestCase(TestCase):
             field_name="twin_sister",
             source="twin_sister",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_ONE,
+            parent_relation=Relation.ONE_TO_ONE,
             model=TwinSisterAuthor,
         )
         parent_node.children.append(child_node)
@@ -148,7 +148,7 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
             field_name="publisher_friends",
             source="publisher_friends",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_MANY,
+            parent_relation=Relation.ONE_TO_MANY,
             model=Publisher,
         )
         parent_node.children.append(child_node)
@@ -168,14 +168,14 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
             field_name="books",
             source="books",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_MANY,
+            parent_relation=Relation.ONE_TO_MANY,
             model=Book,
         )
         grandchild_node = FieldNode(
             field_name="publisher",
             source="publisher",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_ONE,
+            parent_relation=Relation.ONE_TO_ONE,
             model=Publisher,
         )
         parent_node.children.append(child_node)
@@ -199,7 +199,7 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
             field_name="books",
             source="books",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_MANY,
+            parent_relation=Relation.ONE_TO_MANY,
             model=Book,
         )
         parent_node.children.append(child_node)
@@ -222,14 +222,14 @@ class QueryBuilderGetPrefetchObjectsTestCase(TestCase):
             field_name="twin_sister",
             source="twin_sister",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_ONE,
+            parent_relation=Relation.ONE_TO_ONE,
             model=TwinSisterAuthor,
         )
         grandchild_node = FieldNode(
             field_name="publisher_friends",
             source="publisher_friends",
             serializer_field=MagicMock(),
-            parent_relation=Relation.X_TO_MANY,
+            parent_relation=Relation.ONE_TO_MANY,
             model=Publisher,
         )
         parent_node.children.append(child_node)
